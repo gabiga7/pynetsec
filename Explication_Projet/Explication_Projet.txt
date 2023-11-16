@@ -1,4 +1,5 @@
-Ce fichier sert à montrer les différentes étapes du projet, nos tentatives, nos réussites, ainsi que les explications des schémas, c'est un fichier différent du README qui lui sert d'explications pour montrer comment le programme main.py marche.
+Ce fichier sert à montrer les différentes étapes du projet, nos tentatives, nos réussites, ainsi que les explications des schémas,nos idées etc.
+C'est un fichier différent du README qui lui sert d'explications pour montrer comment le programme main.py marche.
 
 Etape 0 (avec schéma) : nous avons dans un premier temps essayé d'implémenter un firewall comme nous pourions en trouver en entreprise, une machine en elle même qui joue le rôle de firewall, les paquets/ trâmes ethernet passeraient par cette machine, le programme de firewall aurait tout simplement joué son rôle et aurait laisser passer ou non les paquets vers les bonnes machines/adresses IP. Pour cette étape nous avons essayé d'implementer le schéma Etape_1.png mais après plusieurs heures nous n'avons pas réussi, cela était très long, et notre ordinateur n'avait pas les ressources nécessaires pour faire en sorte de faire tourner tous les machines en même temps (ni pas trop la place nécessaire).
 
@@ -6,11 +7,14 @@ Etape 0 (avec schéma) : nous avons dans un premier temps essayé d'implémenter
 Etape 1 (avec schéma) : Etant donné donc que notre but principale est de faire un firewall et non d'implémenter un mini parc informatique nous avons donc décidé de changer notre point de vue et de faire sur notre machine un firewall entre notre machine et internet (voir Etape_2.png).
 
 
-Etape 2 : La premiere chose à faire a été de faire en sorte que notre programme puisse "sniffer" les paquets, étant donné que la plupart du temps un ordinateur n'utilise qu'une seule interface réseau pour se connecter à un internet nous avons décidé de faire en sorte que notre firewall "écoute" sur une interface donnée et "intercepte" / "sniffe" les paquets de cette interface.
+Etape 2 : La premiere chose à faire sera de faire en sorte que notre programme puisse "sniffer" les paquets, étant donné que la plupart du temps un ordinateur n'utilise qu'une seule interface réseau pour se connecter à un internet nous avons décidé de faire en sorte que notre firewall "écoute" sur une interface donnée et "intercepte" / "sniffe" les paquets de cette interface.
 
-Etape 3 : Sniffer les paquets d'une interface nous permet de voir les paquets entrant mais aussi sortant de l'interface ce qui nous permet d'analyser le traffic. Nous avons fait en sorte de pouvoir avoir un graph qui nous montre le traffic réseau sur l'interface (nombre de paquets avec l'adresse IP associé)
+Etape 3 : Sniffer les paquets d'une interface nous permet de voir les paquets entrant mais aussi sortant de l'interface ce qui nous permet d'analyser le traffic. Nous feront en sorte de pouvoir avoir un graph qui nous montre le traffic réseau sur l'interface (nombre de paquets avec l'adresse IP associé)
 
-Etape 4 : La suite a été d'implémenté la fonctionnalité de blocage de flux (et donc son opposé d'autorisé un flux)
+Etape 4 : Ensuite pour passer au but meme d'un firewall, nous implémenterons dans un premiertemps la fonctionnalité de blocage de flux sur une IP donné, et nous verrons s'il est possible de faire aussi en sorte de bloquer un flux sur un port donné.
+
+
+Etape 5 : si jamais nous avons le temps nous essaierons de faire d'autre fonctionnalité comme par exemple voir les logs (en rapport avec l'étape 3 par exemple vu qu'on aura un programme qui sniffe les paquets) : IP, port utilisé, flux denied ou allowed, heure de la connexion, service utilisé etc... 
 
 
 
