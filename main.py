@@ -7,14 +7,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.ensemble import IsolationForest
 import subprocess
-import os
-import ctypes
 
 
 class NetworkAnalyzer:
     def _init_(self, interface=None):
         self.interface = interface
-        self.packet_counter = pd.DataFrame(columns=['IP', 'Count'])
+        self.packet_counter = pd.DataFrame(columns=['IP', 'DestinationIP', 'Service', 'Flags', 'Length', 'Count'])
         self.anomaly_detector = IsolationForest(contamination=0.05)
         self.blocked_ips = set()
 
@@ -34,16 +32,13 @@ class NetworkAnalyzer:
                 dst_port = packet[scapy.UDP].dport
                 flags = None  # No flags for UDP
             else:
-                # You can handle other protocols as needed
                 protocol = "Other"
                 src_port = None
                 dst_port = None
                 flags = None
 
-            # Additional information
             packet_length = len(packet)
 
-            # Update packet counter with more information
             self.packet_counter = self.packet_counter.append({
                 'IP': src_ip,
                 'DestinationIP': dst_ip,
@@ -62,59 +57,52 @@ class NetworkAnalyzer:
                 'Count': 1
             }, ignore_index=True)
 
-            # Remove old entries
             self.packet_counter = self.packet_counter.groupby(['IP', 'DestinationIP', 'Service', 'Flags', 'Length']).sum().reset_index()
-
 
     def start_sniffer(self):
         scapy.sniff(iface=self.interface, store=False, prn=self.packet_callback)
 
     def analyze_traffic(self):
         while True:
-            time.sleep(10)  # Analyze traffic every 10 seconds
+            time.sleep(10)
 
-            # Display real-time packet counts
             print("\nTraffic Analysis:")
             print(self.packet_counter.sort_values(by='Count', ascending=False))
 
-            # Visualize traffic
             self.visualize_traffic()
-
-            # Detect anomalies using Isolation Forest
             self.detect_anomalies()
 
     def visualize_traffic(self):
-        # Plot the top 10 IP addresses based on packet count
-        top_ips = self.packet_counter.sort_values(by='Count', ascending=False).head(10)
+        top_ips = self.packet_counter.groupby('IP')['Count'].sum().sort_values(ascending=False).head(10)
 
-        # Ensure only the top 10 IPs are plotted
-        plt.bar(top_ips['IP'], top_ips['Count'])
+        plt.barh(top_ips.index, top_ips)
         plt.title('Top 10 IPs by Packet Count')
-        plt.xlabel('IP Address')
-        plt.ylabel('Packet Count')
+        plt.xlabel('Packet Count')
+        plt.ylabel('IP Address')
         plt.show()
 
-
     def detect_anomalies(self):
-        # Prepare data for anomaly detection
         data = self.packet_counter[['Count']].values.reshape(-1, 1)
-
-        # Fit the Isolation Forest model
         self.anomaly_detector.fit(data)
-
-        # Predict anomalies
         predictions = self.anomaly_detector.predict(data)
-
-        # Reset index before filtering anomalies
-        self.packet_counter.reset_index(drop=True, inplace=True)
-
-        # Identify anomalies
         anomalies = self.packet_counter[self.packet_counter.index.isin(self.packet_counter.index[predictions == -1])]
 
         if not anomalies.empty:
             print("\nAnomalies Detected:")
             print(anomalies)
 
+    def block_ip(self, ip_address):
+        self.blocked_ips.add(ip_address)
+        try:
+            command_inbound = ["netsh", "advfirewall", "firewall", "add", "rule", f"name=Block-{ip_address}-Inbound", "dir=in", "interface=any", "action=block", f"remoteip={ip_address}"]
+            subprocess.run(command_inbound, check=True)
+
+            command_outbound = ["netsh", "advfirewall", "firewall", "add", "rule", f"name=Block-{ip_address}-Outbound", "dir=out", "interface=any", "action=block", f"remoteip={ip_address}"]
+            subprocess.run(command_outbound, check=True)
+
+            print(f"Blocked traffic from and to {ip_address}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error blocking traffic from and to {ip_address}: {e}")
 
     def get_packet_counts(self):
         return self.packet_counter
@@ -139,6 +127,8 @@ class App:
         self.show_counts_button = tk.Button(root, text="Show Packet Counts", command=self.show_packet_counts)
         self.show_counts_button.pack()
 
+        self.block_ip_button = tk.Button(root, text="Block IP", command=self.block_ip_dialog)
+        self.block_ip_button.pack()
 
     def start_sniffer(self):
         self.network_analyzer.interface = self.get_network_interface()
@@ -154,9 +144,13 @@ class App:
         self.text_area.delete(1.0, tk.END)
         self.text_area.insert(tk.END, packet_counts)
 
+    def block_ip_dialog(self):
+        ip_to_block = simpledialog.askstring("Block IP", "Enter the IP address to block:")
+        if ip_to_block:
+            self.network_analyzer.block_ip(ip_to_block)
 
     def get_network_interface(self):
-        interface = simpledialog.askstring("Input", "Enter the network interface (e.g., eth0):")
+        interface = simpledialog.askstring("Input", "Enter the network interface (e.g., Wi-Fi):")
         return interface
 
 
