@@ -10,7 +10,7 @@ import subprocess
 
 
 class NetworkAnalyzer:
-    def _init_(self, interface=None):
+    def __init__(self, interface=None):
         self.interface = interface
         self.packet_counter = pd.DataFrame(columns=['IP', 'DestinationIP', 'Service', 'Flags', 'Length', 'Count'])
         self.anomaly_detector = IsolationForest(contamination=0.05)
@@ -149,7 +149,7 @@ class NetworkAnalyzer:
         return self.packet_counter
 
 class App:
-    def _init_(self, root, network_analyzer):
+    def __init__(self, root, network_analyzer):
         self.root = root
         self.network_analyzer = network_analyzer
 
