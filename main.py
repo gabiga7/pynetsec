@@ -2,7 +2,7 @@ import scapy.all as scapy
 import threading
 import time
 import tkinter as tk
-from tkinter import scrolledtext, simpledialog
+from tkinter import scrolledtext, simpledialog, messagebox
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.ensemble import IsolationForest
@@ -20,6 +20,7 @@ class NetworkAnalyzer:
         self.model = load_model('models/network_model.h5')
         self.syn_threshold = 50
         self.syn_counter = pd.DataFrame(columns=['IP', 'Count'])
+        self.warning_displayed_ips = set()
 
     def pad_and_convert(self, s):
         if len(s) < 2000:
@@ -27,6 +28,7 @@ class NetworkAnalyzer:
         else:
             s = s[:2000]
         return np.array([float(int(s[i]+s[i+1], 16)/255) for i in range(0, 2000, 2)])
+    
 
     def packet_callback(self, packet):
         if packet.haslayer(scapy.IP):
@@ -51,8 +53,17 @@ class NetworkAnalyzer:
                     else:
                         self.syn_counter = self.syn_counter.append({'IP': src_ip, 'Count': 1}, ignore_index=True)
 
-                    if self.syn_counter.loc[self.syn_counter['IP'] == src_ip, 'Count'].values[0] > self.syn_threshold:
-                        print(f"Possible SYN flood attack detected from {src_ip}")
+                    if (
+                        self.syn_counter.loc[self.syn_counter['IP'] == src_ip, 'Count'].values[0] > self.syn_threshold
+                        and src_ip not in self.warning_displayed_ips
+                    ):
+                        # Display warning window for SYN flood attack
+                        messagebox.showwarning("SYN Flood Attack Detected", f"Possible SYN flood attack detected from {src_ip}")
+
+                        self.block_ip(src_ip)
+                        self.blocked_ips.add(src_ip)
+                        self.warning_displayed_ips.add(src_ip)  # Add the IP to the set
+
 
             elif packet.haslayer(scapy.UDP):
                 protocol = "UDP"
@@ -138,13 +149,18 @@ class NetworkAnalyzer:
     def block_ip(self, ip_address):
         self.blocked_ips.add(ip_address)
         try:
+            # Block traffic from and to the IP
             command_inbound = ["netsh", "advfirewall", "firewall", "add", "rule", f"name=Block-{ip_address}-Inbound", "dir=in", "interface=any", "action=block", f"remoteip={ip_address}"]
             subprocess.run(command_inbound, check=True)
 
             command_outbound = ["netsh", "advfirewall", "firewall", "add", "rule", f"name=Block-{ip_address}-Outbound", "dir=out", "interface=any", "action=block", f"remoteip={ip_address}"]
             subprocess.run(command_outbound, check=True)
 
-            print(f"Blocked traffic from and to {ip_address}")
+            # Block ICMP (ping) traffic
+            command_icmp = ["netsh", "advfirewall", "firewall", "add", "rule", "name=Block-ICMP", "protocol=icmpv4", "dir=in", "action=block"]
+            subprocess.run(command_icmp, check=True)
+
+            print(f"Blocked traffic from and to {ip_address} and ICMP traffic.")
         except subprocess.CalledProcessError as e:
             print(f"Error blocking traffic from and to {ip_address}: {e}")
 
@@ -201,7 +217,7 @@ class App:
         self.show_suspicious_button = tk.Button(display_info_frame, text="Show Suspicious Packets", command=self.show_suspicious_packets)
         self.show_suspicious_button.pack(side=tk.LEFT, padx=5)
 
-        self.show_blocked_ips_button = tk.Button(display_info_frame, text="Show Blocked IPs", command=self.show_blocked_ips)
+        self.show_blocked_ips_button = tk.Button(display_info_frame, text="Blacklist", command=self.show_blocked_ips)
         self.show_blocked_ips_button.pack(side=tk.LEFT, padx=5)
 
         packet_management_frame = tk.Frame(root)
