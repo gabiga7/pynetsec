@@ -57,12 +57,12 @@ class NetworkAnalyzer:
                         self.syn_counter.loc[self.syn_counter['IP'] == src_ip, 'Count'].values[0] > self.syn_threshold
                         and src_ip not in self.warning_displayed_ips
                     ):
-                        # Display warning window for SYN flood attack
+
                         messagebox.showwarning("SYN Flood Attack Detected", f"Possible SYN flood attack detected from {src_ip}")
 
                         self.block_ip(src_ip)
                         self.blocked_ips.add(src_ip)
-                        self.warning_displayed_ips.add(src_ip)  # Add the IP to the set
+                        self.warning_displayed_ips.add(src_ip)
 
 
             elif packet.haslayer(scapy.UDP):
@@ -149,14 +149,12 @@ class NetworkAnalyzer:
     def block_ip(self, ip_address):
         self.blocked_ips.add(ip_address)
         try:
-            # Block traffic from and to the IP
             command_inbound = ["netsh", "advfirewall", "firewall", "add", "rule", f"name=Block-{ip_address}-Inbound", "dir=in", "interface=any", "action=block", f"remoteip={ip_address}"]
             subprocess.run(command_inbound, check=True)
 
             command_outbound = ["netsh", "advfirewall", "firewall", "add", "rule", f"name=Block-{ip_address}-Outbound", "dir=out", "interface=any", "action=block", f"remoteip={ip_address}"]
             subprocess.run(command_outbound, check=True)
 
-            # Block ICMP (ping) traffic
             command_icmp = ["netsh", "advfirewall", "firewall", "add", "rule", "name=Block-ICMP", "protocol=icmpv4", "dir=in", "action=block"]
             subprocess.run(command_icmp, check=True)
 
@@ -194,7 +192,7 @@ class App:
         self.network_analyzer = network_analyzer
 
         self.root.title("Network Traffic Analyzer")
-        self.root.geometry("600x600")
+        self.root.geometry("620x600")
 
         self.text_area = scrolledtext.ScrolledText(root, wrap=tk.WORD)
         self.text_area.pack(expand=True, fill='both')
